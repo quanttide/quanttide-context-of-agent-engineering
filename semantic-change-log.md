@@ -1,6 +1,8 @@
 # 语义变更实验记录
 
-## 变更
+本实验应当在 lab 中完成（`examples/default/experiments/cross-agent-semantic-sharing/`），而非在真实配置上操作。
+
+以下为回顾性记录。
 
 为 Ponytail 行为规则新增一条：
 

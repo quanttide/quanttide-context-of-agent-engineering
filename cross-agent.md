@@ -14,11 +14,11 @@
 
 - **Ponytail 系统提示词** — "lazy senior dev mode"，定义 agent 行为准则（YAGNI、标准库优先、最小代码、ponytail: 注释标记等）
 - 在各工具中的表达方式：
-  - **Zed**：`~/.config/zed/AGENTS.md`，agent 运行时自动加载
-  - **OpenCode**：通过 ponytail 插件注入提示词
+  - **Zed**：`~/.config/zed/AGENTS.md` → 符号链接指向 ponytail 仓库的 `AGENTS.md`（单一源头，不维护副本）
+  - **OpenCode**：通过 ponytail 插件从同一仓库的 `ponytail-instructions.js` 注入提示词
   - **Hermes**：暂未集成
 
-同一份语义（身份指令），不同工具用各自机制加载。
+同一份语义（身份指令），源头在 ponytail 仓库，各工具通过各自机制引用。
 
 ### 2. Ponytail 插件行为
 

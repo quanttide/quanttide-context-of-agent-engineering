@@ -30,12 +30,10 @@
 
 修改文件：`data/profile/zed/AGENTS.md`
 
-### 步骤 3：修改 OpenCode ponytail 插件（共享指令模块）
+### 步骤 3：OpenCode ponytail 插件（共享指令模块）
 
-耗时：约 10s
-操作：在 `getFallbackInstructions` 的 Rules 段落末尾新增该规则
-
-修改文件：`ponytail/hooks/ponytail-instructions.js`（ponytail 仓库，非本仓库）
+假设修改点：`ponytail/hooks/ponytail-instructions.js` 的 `getFallbackInstructions` 函数
+操作：未实际修改，仅记录位置
 
 ### 步骤 4：Hermes
 
@@ -57,9 +55,8 @@ Hermes 尚未集成 Ponytail，跳过。
 |------|------|
 | 记录语义意图 | 30s |
 | 修改 Zed AGENTS.md | 15s |
-| 修改 ponytail-instructions.js（OpenCode） | 10s |
 | 提交同步 | 60s |
-| **总计** | **约 2 分钟** |
+| **总计** | **约 1 分 45 秒** |
 
 ### 观察
 

@@ -1,56 +1,72 @@
-# 跨智能体配置管理分析
+# 跨智能体语义共享分析
 
-## 现状
+## 问题
 
-当前通过 `data/profile` 管理三种工具的配置：
+跨智能体管理，管的是什么？
 
-| 工具 | 跟踪的文件 | 用途 |
-|------|-----------|------|
-| **Zed** | `AGENTS.md` + `settings.json` | 系统提示词 + 编辑器/Agent 配置 |
-| **OpenCode** | `opencode.json` | 自定义配置（插件引用） |
-| **Hermes** | `config.yaml` | 运行时配置（模型/tools/terminal） |
+不是管配置文件的语法结构（每个工具语法各异，抽象层收益低），而是管**语义**——同一份概念在不同工具中以各自原生方式表达。
 
-辅助仓库 `data/library` 提供各工具的配置参考文档，用于对照官方文档维护 profile。
+## 当前共享的语义
 
-## 收益分层
+### 1. Ponytail 身份与行为模式
 
-### 高收益（跨机器直接复用，无需修改）
+所有 agent（Zed Agent、OpenCode、Hermes）共享同一套身份定义：
 
-| 文件 | 原因 |
-|------|------|
-| `zed/AGENTS.md` | Ponytail 系统提示词，所有机器一致，cp 即用 |
-| `zed/settings.json` 中的 `agent.default_model`、`language_models`、`theme`、`font_size` | 模型选择、UI 偏好跨机器一致 |
-| `hermes/config.yaml` 中的 `model`、`toolsets`、`compression`、`checkpoints` | 运行时策略偏好，不依赖机器路径 |
+- **Ponytail 系统提示词** — "lazy senior dev mode"，定义 agent 行为准则（YAGNI、标准库优先、最小代码、ponytail: 注释标记等）
+- 在各工具中的表达方式：
+  - **Zed**：`~/.config/zed/AGENTS.md`，agent 运行时自动加载
+  - **OpenCode**：通过 ponytail 插件注入提示词
+  - **Hermes**：暂未集成
 
-### 中收益（跨机器需要小幅调整）
+同一份语义（身份指令），不同工具用各自机制加载。
 
-| 文件 | 调整点 |
-|------|--------|
-| `zed/settings.json` 中的 `agent.tool_permissions` | `always_allow` 的路径白名单是项目路径相关的 |
-| `hermes/config.yaml` 中的 `terminal.cwd`、`sandboxes` | 工作目录相关 |
-| `opencode/opencode.json` | `plugin` 路径已用 `~` 处理，但符号链接需要每台机器建 |
+### 2. Ponytail 插件行为
 
-### 低收益（单机独有或可通过安装获取）
+ponytail 插件（`ponytail.mjs`）为 OpenCode 提供了一套命令：
 
-| 内容 | 原因 |
-|------|------|
-| `opencode/command/`（ponytail 命令） | 由 ponytail 仓库安装 |
-| `hermes/SOUL.md` | 安装自带 |
-| `hermes/.env` | 含 API 密钥，不纳入版本管理 |
-| 运行时缓存/数据库（sessions, state.db 等） | 机器运行时生成 |
+- `ponytail audit`、`ponytail review`、`ponytail gain` 等
+- 这些命令封装了 Ponytail 工作流中重复出现的操作模式
 
-## 真正的跨智能体共享点
+插件的语义是"Ponytail 工作流的 terminal 入口"，OpenCode 通过 `plugin` 配置加载它，Zed Agent 通过 `AGENTS.md` 加载同一套逻辑。未来 Hermes 也可能通过 skills 机制加载类似功能。
 
-1. **Ponytail system prompt**（`zed/AGENTS.md`）— 所有 agent 共享相同的懒人开发模式指令
-2. **模型选型策略** — main/flash 做日常、pro 修复杂问题、GLM 备选（详见 `data/report/models/index.md`）
-3. **工具权限策略** — 什么路径 allow、什么命令 allow（目前只在 Zed 中有显式配置）
+### 3. 模型选型策略
 
-## 核心定位
+| 层级 | 模型 | 用途 |
+|------|------|------|
+| 主力 | DeepSeek V4 Flash | 日常编码，性价比高 |
+| 上位替代 | DeepSeek V4 Pro | 复杂问题，DeepSeek 自己解决不了时 |
+| 备选 | GLM 5.2 / 5V-Turbo | DeepSeek 生态外的后备方案 |
 
-当前 profile 的核心价值是**单机备份恢复**（cp 即用）。跨智能体统一管理的收益有限——三个工具各自的配置语法差异大，抽象层收益不高。
+各工具表达方式：
+- **Zed**：`settings.json` 中 `agent.default_model` + `language_models` 配置
+- **OpenCode**：`opencode.json` 中 `agents.coder.model`
+- **Hermes**：`config.yaml` 中 `model.default` + `model.provider`
 
-### 可能的演进方向
+同一份策略，各工具各自配置。
 
-- 抽一个统一的 `model-providers.md` 记录各供应商 API 接入、模型规格、价格
-- 各工具的配置对照该文档生成
-- 但这增加抽象层，与"cp 即用"的简洁原则冲突
+### 4. 工具权限策略
+
+哪些操作需要确认、哪些可以直接执行：
+
+- `terminal` → 默认允许
+- `fetch` → 默认允许
+- `write_file` → 特定路径白名单 always_allow，其余允许
+
+目前只在 Zed 中有显式配置，其他工具尚未统一。
+
+## 语义管理的收益
+
+真正有收益的跨智能体管理，不是"统一配置文件格式"，而是：
+
+1. **一处决策，多处同步** — 模型选型换了，各工具的配置对照着改
+2. **身份一致性** — 无论用哪个 agent，Ponytail 的行为模式一致
+3. **插件生态复用** — ponytail 命令写一次，OpenCode 和未来的 agent 都能用
+
+## 管理的边界
+
+不管理的：
+
+- 每个工具独有的功能（Zed 的 UI 主题、Hermes 的 sandbox/checkpoint）
+- 通过安装获取的内容（默认提示词、内置命令）
+- 含密钥的文件（`.env`）
+- 运行时生成的数据（缓存、数据库）

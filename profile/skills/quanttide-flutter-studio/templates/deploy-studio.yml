@@ -1,0 +1,95 @@
+# 复制到 <app-repo>/.github/workflows/deploy-studio.yml，改参数：
+#   1. oss://<BUCKET>/     （与 manifests/terraform 的 bucket_name 一致）
+#   2. '<DOMAIN>'          （CDN 域名，studio 惯例 studio.<产品>.example.com）
+#   3. flutter-version     （与本地同版；改 CI 的 pin 前先用该版把门禁跑绿）
+#   4. paths / tag 前缀（默认 src/studio/**、'studio/*'）
+# 前置：GitHub Secrets 配好 ALIYUN_ACCESS_KEY_ID / ALIYUN_ACCESS_KEY_SECRET；
+#       OSS 桶已建（私有 + CDN 私有回源；根改写 ^/$ → /index.html，否则私桶根路径 403）
+#
+# 形态：分支/PR 只跑门禁，tag 才构建部署（家族惯例，同 qtcloud-work 的 release-studio.yml）
+name: deploy-studio
+
+on:
+  push:
+    branches: ['**']
+    tags: ['studio/*']
+    paths: ['src/studio/**', '.github/workflows/deploy-studio.yml']
+  pull_request:
+    paths: ['src/studio/**', '.github/workflows/deploy-studio.yml']
+
+# 按 ref 分组：分支上的门禁不会把正在跑的发布干掉
+concurrency:
+  group: deploy-studio-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality-gates:
+    name: Quality Gates
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/studio
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.9'
+          cache: true
+
+      - run: flutter pub get
+      - name: Format
+        run: dart format --set-exit-if-changed --output=none .
+      - name: Analyze
+        run: flutter analyze
+      - name: Test
+        run: flutter test
+
+  build-and-deploy:
+    name: Build Flutter Web & Deploy to OSS
+    needs: quality-gates
+    if: startsWith(github.ref, 'refs/tags/studio/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.9'
+          cache: true
+
+      - run: cd src/studio && flutter pub get
+      - run: cd src/studio && flutter build web
+
+      - uses: manyuanrong/setup-ossutil@v3.0
+        with:
+          endpoint: oss-cn-hangzhou.aliyuncs.com
+          access-key-id: ${{ secrets.ALIYUN_ACCESS_KEY_ID }}
+          access-key-secret: ${{ secrets.ALIYUN_ACCESS_KEY_SECRET }}
+
+      # 静态资源长缓存：内容按版本变化，文件名带 hash
+      - run: ossutil cp src/studio/build/web/ oss://<BUCKET>/ -r -f --meta=Cache-Control:public,max-age=31536000
+
+      # 元信息与入口文件单独 no-cache：长缓存会导致浏览器拿不到新版
+      - run: ossutil cp src/studio/build/web/manifest.json oss://<BUCKET>/manifest.json -f --meta=Cache-Control:no-cache
+      - run: ossutil cp src/studio/build/web/index.html oss://<BUCKET>/index.html -f --meta=Cache-Control:no-cache
+      - run: ossutil cp src/studio/build/web/flutter_bootstrap.js oss://<BUCKET>/flutter_bootstrap.js -f --meta=Cache-Control:no-cache
+
+      - name: Refresh CDN
+        run: |
+          pip install aliyun-python-sdk-cdn
+          python -c "
+          from aliyunsdkcore.client import AcsClient
+          from aliyunsdkcdn.request.v20180510.RefreshObjectCachesRequest import RefreshObjectCachesRequest
+          import os
+          cli = AcsClient(os.environ['ALIYUN_ACCESS_KEY_ID'], os.environ['ALIYUN_ACCESS_KEY_SECRET'], 'cn-hangzhou')
+          # 只列正式入口；旧域名若仍指向同一个桶，一并刷新免得它吐旧版（过渡态结束就摘掉）
+          for domain in ['<DOMAIN>']:
+              req = RefreshObjectCachesRequest()
+              req.set_ObjectPath(f'https://{domain}/')
+              req.set_ObjectType('Directory')
+              cli.do_action_with_exception(req)
+          "
+        env:
+          ALIYUN_ACCESS_KEY_ID: ${{ secrets.ALIYUN_ACCESS_KEY_ID }}
+          ALIYUN_ACCESS_KEY_SECRET: ${{ secrets.ALIYUN_ACCESS_KEY_SECRET }}

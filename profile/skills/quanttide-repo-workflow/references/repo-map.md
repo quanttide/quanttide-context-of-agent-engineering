@@ -10,14 +10,14 @@
 
 ## assets/ 聚合容器结构（2026-08）
 ```
-assets/quanttide-intention/            # 意图聚合（子仓库在容器内部 assets/ 下）
+categories/quanttide-intention/            # 意图聚合（子仓库在容器内部 assets/ 下）
 ├── assets/default/company → quanttide-intention-of-business-entity（公司意图 v0.2.6）
 ├── assets/data/           → quanttide-intention-of-data-engineering
 ├── assets/pay/            → quanttide-intention-of-payment-engineering
 ├── assets/human/          → quanttide-intention-of-human-resources
 └── README.md / docs/（MyST 导航）/ AGENTS.md / CHANGELOG.md
 
-assets/quanttide-journal/              # 日志聚合
+categories/quanttide-journal/              # 日志聚合
 └── default/company        → quanttide-journal-of-business-entity
 ```
 模式：容器只放导航文档 + .gitmodules；子仓库独立维护；公司实体 = `default/company`，其他按领域名（data/pay/human）。
@@ -56,7 +56,7 @@ assets/quanttide-journal/              # 日志聚合
 - `data/journal`：quanttide-journal-of-organization-management
 - 定位 = "谁有权、怎么管"；delib = "议题怎么走流程"
 
-## `assets/quanttide-bylaw`（章程聚合容器，组织结构权威源）
+## `categories/quanttide-bylaw`（章程聚合容器，组织结构权威源）
 - 聚合各法人主体章程（default/company → quanttide-bylaw-of-business-entity）与各领域章程（domains/asset|data|delib|devops|...）
 - `default/company/organization/`：position/secretary.md（秘书三层制度：部门秘书→秘书处→秘书长）、position/company-representative.md（公司代表）、department/deliberation-institution.md（创始人-上议院-下议院三权并列：上议院=股东代表大会/所有权/合伙人委员会立宪权司法权，下议院=公司代表大会/经营权/书记处+执行委员会+技术委员会；书记处≠秘书处——书记处属下议院内设）、rank.md（五序列职级 G/P/F/T/M）
 - `default/company/qtdata/support.md`：课堂 BU、数据 BU、秘书长（中台）——事业部的现行实证
@@ -67,7 +67,7 @@ assets/quanttide-journal/              # 日志聚合
 | 类型 | 仓库 | 结构 | 信息源 |
 |------|------|------|--------|
 | 产品档案 | quanttide-product/data/profile | 一个文件夹一个产品：index.md（产品级思考五维度）/ requirement.md（用户故事地图）/ evaluation.md（评估档案） | journal / roadmap / intention |
-| 组织档案 | quanttide-org/data/profile | **两组结构（终稿）**：`orgs/<org>/`（index.md 定位/目标/形态/关联 + 可选 structure/institution/culture；qtacademy 的 structure/institution 为目录）+ `people/<slug>/index.md`（一人一档，目录式）；README = 结构说明与名单 | 品牌/意图/roadmap/**章程**（assets/quanttide-bylaw/default/company） |
+| 组织档案 | quanttide-org/data/profile | **两组结构（终稿）**：`orgs/<org>/`（index.md 定位/目标/形态/关联 + 可选 structure/institution/culture；qtacademy 的 structure/institution 为目录）+ `people/<slug>/index.md`（一人一档，目录式）；README = 结构说明与名单 | 品牌/意图/roadmap/**章程**（categories/quanttide-bylaw/default/company） |
 | 交互设计档案 | quanttide-design/data/profile | 一个文件夹一个产品，仅 index.md，**记理想不记现状** | 设计 context 分析 |
 
 ## data/intention 文档站结构（v0.2.6，myst.yml toc）
